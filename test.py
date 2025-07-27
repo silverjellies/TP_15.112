@@ -10,10 +10,10 @@ def onAppStart(app):
     app.width = 800
     app.horizontalRes = 150
     app.halfVertRes = 120
-    app.scalingFact = app.horizontalRes/50
+    app.scalingFact = app.horizontalRes/40
     app.cx = 50
     app.cy = 250
-    app.rot = 120
+    app.rot = 0
     app.stepsPerSecond = 100
     app.map = Image.open("SNES_Rainbow_Road.jpg")
     app.map = app.map.resize((app.width,app.height))
@@ -26,7 +26,7 @@ def redrawAll(app):
 
 def onStep(app):
     for i in range(app.horizontalRes):
-        rotate = app.rot + np.deg2rad(i/app.scalingFact - 30)
+        rotate = app.rot + np.deg2rad(i/app.scalingFact-30)
         sine, cos, cos2 = np.sin(rotate), np.cos(rotate), np.cos((i/app.scalingFact - 30)/180*math.pi)
         for j in range(app.halfVertRes):
             n = (app.halfVertRes/(app.halfVertRes-j))/cos2
