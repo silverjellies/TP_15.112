@@ -28,7 +28,7 @@ def onAppStart(app):
     app.mapArr = app.map.convert("RGB")
     app.mapFilt = Image.new(mode="RGB",size=(app.width, app.height)).convert('RGB')
     app.result = Image.new(mode="RGB",size=(150,140)).convert('RGB')
-    
+    app.isDrifting = False
     onStep(app)
 
 def loadSpritePilImages(path, numSprites, flip):
@@ -79,21 +79,25 @@ def onStep(app):
     app.image = CMUImage(app.resultCopy)
 
 def onKeyHold(app, keys):
+    if ('space' in keys):
+        app.isDrifting = True
     if ('left' in keys):
-        app.rot -= 0.1
-        if app.turningLeft<2:
+        app.rot -= 0.05
+        if app.isDrifting:
+            app.rot-=0.03
+            app.frame = 3
+        elif app.turningLeft<2:
             app.frame += 1
         app.turningLeft += 1
-        if app.turningLeft>10:
+    if 'right' in keys:
+        app.rot += 0.05
+        if app.isDrifting:
+            app.rot += 0.03
             app.frame = 3
-    elif 'right' in keys:
-        app.rot += 0.1
-        if app.turningRight<2:
+        elif app.turningRight<2:
             app.frame += 1
         app.turningRight += 1
-        if app.turningRight>10:
-            app.frame = 3
-    elif 'up' in keys:
+    if 'up' in keys:
         app.cx += math.cos(app.rot)*0.1
         app.cy += math.sin(app.rot)*0.1
         print(app.mapArr.getpixel((app.cx,app.cy)))
@@ -101,7 +105,7 @@ def onKeyHold(app, keys):
             app.cx -= math.cos(app.rot)*0.1
             app.cy -= math.sin(app.rot)*0.1
             
-    elif 'down' in keys:
+    if 'down' in keys:
         app.cx -= math.cos(app.rot)*0.1
         app.cy -= math.sin(app.rot)*0.1
 
@@ -112,6 +116,8 @@ def onKeyRelease(app,key):
     elif 'right' == key:
         app.turningRight = 0
         app.frame = 0
+    elif ('space' == key):
+        app.isDrifting = False
 
 def main():
     runApp()
