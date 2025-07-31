@@ -15,6 +15,7 @@ def onAppStart(app):
     app.cy = 0
     app.rot = 0
     app.stepsPerSecond = 100
+    app.setMaxShapeCount(200000)
     app.map = Image.open("SNES_Rainbow_Road.jpg")
     app.map = app.map.resize((app.width,app.height))
     app.mapArr = app.map.convert("RGB")
@@ -28,15 +29,15 @@ def redrawAll(app):
         for j in range(app.halfVertRes*2):
             image = CMUImage(app.mapFilt)
             drawImage(image, app.width, app.height, align='center')
-            #drawCell(app, i,j)
+            drawCell(app, i,j)
 
 def drawCell(app, i,j):
 
     r,g,b = app.mapFilt.getpixel((i,j))
-    #color = rgb(r,g,b)#rgb(app.mapFilt[i][j][0]*255,app.mapFilt[i][j][1]*255,app.mapFilt[i][j][2]*255)
-    #cellWidth = app.width/app.horizontalRes
-    #cellHeight = app.width/(app.halfVertRes*2)
-    #drawRect(i*cellWidth,j*cellHeight,cellWidth,cellHeight,fill=color)
+    color = rgb(r,g,b)#rgb(app.mapFilt[i][j][0]*255,app.mapFilt[i][j][1]*255,app.mapFilt[i][j][2]*255)
+    cellWidth = app.width/app.horizontalRes
+    cellHeight = app.width/(app.halfVertRes*2)
+    drawRect(i*cellWidth,j*cellHeight,cellWidth,cellHeight,fill=color)
     
 def onStep(app):
     for i in range(app.horizontalRes):

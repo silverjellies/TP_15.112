@@ -11,7 +11,7 @@ def onAppStart(app):
     app.horizontalRes = 150
     app.halfVertRes = 120
     app.image = []
-    app.scalingFact = app.horizontalRes/50
+    app.scalingFact = app.horizontalRes/60
     app.cx = 70
     app.cy = 280
     app.rot = 120
@@ -22,12 +22,16 @@ def onAppStart(app):
     app.spriteRightTurn = [CMUImage(pilImage) for pilImage in spriteRight]
     app.turningLeft = 0
     app.turningRight = 0
-    app.frame = 0
+    app.rightFrame = 0
+    app.leftFrame = 0
+    app.leftHoldFirst = False
+    app.rightHoldFirst = False
     app.map = Image.open("rainbow_road.png")
     app.map = app.map.resize((app.width,app.height))
     app.mapArr = app.map.convert("RGB")
     app.mapFilt = Image.new(mode="RGB",size=(app.width, app.height)).convert('RGB')
     app.result = Image.new(mode="RGB",size=(150,140)).convert('RGB')
+    app.marioHitbox = []
     app.isDrifting = False
     onStep(app)
 
@@ -55,12 +59,18 @@ def redrawAll(app):
     if app.turningLeft == 0 and app.turningRight == 0:
         drawImage(app.spriteRightTurn[0],400, 450, align='center')
     elif app.turningLeft>0:
-        drawImage(app.spriteLeftTurn[app.frame],400, 450, align='center')
+        drawImage(app.spriteLeftTurn[app.leftFrame],400, 450, align='center')
     else:
-        drawImage(app.spriteRightTurn[app.frame],400, 450, align='center')
+        drawImage(app.spriteRightTurn[app.rightFrame],400, 450, align='center')
+    drawLine(340,0,340,600)
+    drawLine(0,470,800,470)
+    drawLine(0,510,800,510)
 
 
 def onStep(app):
+    updateCanvas(app)
+
+def updateCanvas(app):
     for i in range(int(app.horizontalRes)):
         rotate = app.rot + np.deg2rad(i/app.scalingFact - 30)
         sine, cos, cos2 = np.sin(rotate), np.cos(rotate), np.cos((i/app.scalingFact - 30)/180*math.pi)
@@ -73,51 +83,82 @@ def onStep(app):
 
     for i in range(150):
         for j in range(140):
-            app.result.putpixel((i,j),(app.mapFilt.getpixel((i,460+j))))
-            
-    app.resultCopy = app.result.resize((800,600))         
+            app.result.putpixel((i,j),(app.mapFilt.getpixel((i,460+j))))      
+    app.resultCopy = app.result.resize((800,600))
+    app.marioHitbox = []     
+    for i in range(130):
+        newRow = []
+        for j in range(40):
+            newRow.append((app.resultCopy.getpixel((340+i,470+j))))    
+        app.marioHitbox.append(newRow)
     app.image = CMUImage(app.resultCopy)
 
 def onKeyHold(app, keys):
     if ('space' in keys):
         app.isDrifting = True
-    if ('left' in keys):
+    if ('left' in keys) and not(app.rightHoldFirst):
+        if 'right' not in keys:
+            app.leftHoldFirst = True
+        ogRot = app.rot
         app.rot -= 0.05
         if app.isDrifting:
             app.rot-=0.03
-            app.frame = 3
+            app.leftFrame = 3
         elif app.turningLeft<2:
-            app.frame += 1
+            app.leftFrame += 1
         app.turningLeft += 1
-    if 'right' in keys:
+        #updateCanvas(app)
+        for row in app.marioHitbox:
+            if (0,255,255) in row:
+                app.rot = ogRot
+    elif 'right' in keys and not(app.leftHoldFirst):
+        app.rightHoldFirst = True
+        ogRot = app.rot
         app.rot += 0.05
         if app.isDrifting:
             app.rot += 0.03
-            app.frame = 3
+            app.rightFrame = 3
         elif app.turningRight<2:
-            app.frame += 1
+            app.rightFrame += 1
         app.turningRight += 1
+        #updateCanvas(app)
+        for row in app.marioHitbox:
+            if (0,255,255) in row:
+                app.rot = ogRot
     if 'up' in keys:
+        ogx = app.cx
+        ogy = app.cy
         app.cx += math.cos(app.rot)*0.1
         app.cy += math.sin(app.rot)*0.1
-        print(app.mapArr.getpixel((app.cx,app.cy)))
-        if (app.mapArr.getpixel((app.cx,app.cy))==(0,255,255)):
-            app.cx -= math.cos(app.rot)*0.1
-            app.cy -= math.sin(app.rot)*0.1
-            
+        #updateCanvas(app)
+        for row in app.marioHitbox:
+            if (0,255,255) in row:
+                app.cx = ogx
+                app.cy = ogy
     if 'down' in keys:
+        ogx = app.cx
+        ogy = app.cy
         app.cx -= math.cos(app.rot)*0.1
         app.cy -= math.sin(app.rot)*0.1
+        #updateCanvas(app)
+        for row in app.marioHitbox:
+            if (0,255,255) in row:
+                app.cx = ogx
+                app.cy = ogy
 
 def onKeyRelease(app,key):
     if ('left' == key):
-        app.frame = 0
+        app.leftFrame = 0
         app.turningLeft = 0
+        app.leftHoldFirst = False
     elif 'right' == key:
+        app.rightHoldFirst = False
         app.turningRight = 0
-        app.frame = 0
+        app.rightFrame = 0
     elif ('space' == key):
         app.isDrifting = False
+        if app.turningLeft>0 or app.turningRight>0:
+            app.frame = 1
 
 def main():
     runApp()
