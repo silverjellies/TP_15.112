@@ -188,7 +188,7 @@ def passedCheckPoint(app):
     if allCheckPassed:
         app.lap+= 1
         app.checkpointStatus = [False,False,False,False,False]
-        if app.lap>0:
+        if app.lap>2:
             app.win = True
             app.lap = 0
 
