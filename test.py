@@ -5,17 +5,53 @@ import math
 import numpy as np
 from matplotlib import _cm
 
+class Time:
+    def __init__(self):
+        self.steps = 0
+        self.seconds = 0
+    
+    def setTime(self, steps):
+        self.steps = steps
+        self.seconds = int(steps//7.3)
+
+    def getSeconds(self):
+        seconds = self.seconds%60
+        if seconds>=10:
+            return f'{seconds}'
+        else:
+            return f'0{seconds}'
+    
+    def getMilli(self):
+        steps = ((self.steps)*10)//10
+        if steps>=10:
+            return f'{steps}'
+        else:
+            return f'0{steps}'
+
+    def getMinutes(self):
+        minutes = (self.seconds//60)%60
+        if minutes>=10:
+            return f'{minutes}'
+        else:
+            return f'0{minutes}'
+
 def onAppStart(app):
     app.height = 600
     app.width = 800
     app.horizontalRes = 150
     app.halfVertRes = 120
     app.image = []
+    app.laps = [(1,'red'),(2,'blue'),(3,'green')]
+    app.lap = 0
     app.scalingFact = app.horizontalRes/60
     app.cx = 2.3
     app.cy = 12.2
     app.rot = 4.7
     app.stepsPerSecond = 100
+    app.time = Time()
+    app.totalSteps = 0
+    app.checkpoints = [False,False,False,False,False]
+    #got the sprites from https://github.com/s4rd0n1k/pygame_mariokart/blob/master/sprites/mario.png
     spriteRight = loadSpritePilImages('mario.png',12, 1)
     spriteLeft = loadSpritePilImages('mario.png',12, -1)
     app.spriteLeftTurn = [CMUImage(pilImage) for pilImage in spriteLeft]
@@ -26,7 +62,9 @@ def onAppStart(app):
     app.leftFrame = 0
     app.leftHoldFirst = False
     app.rightHoldFirst = False
-    app.map = Image.open("rainbow_road.png")
+    #got rainbow road from https://mariokart.fandom.com/wiki/Tracks?file=SNES_Rainbow_Road.png
+    #I edited it to look like the map you see now
+    app.map = Image.open("edited_rainbow_road.png")
     app.map = app.map.resize((app.width,app.height))
     app.mapArr = app.map.convert("RGB")
     app.mapFilt = Image.new(mode="RGB",size=(app.width, app.height)).convert('RGB')
@@ -65,13 +103,22 @@ def redrawAll(app):
     drawLine(340,0,340,600)
     drawLine(0,470,800,470)
     drawLine(0,510,800,510)
+    drawLabel(f"{app.time.getMinutes()}' {app.time.getSeconds()}" + f'"', 680,50,size = 40, fill = 'white', font = 'orbitron')
+    label,color = app.laps[app.lap]
+    drawRect(530,10,50,65, fill='gray')
+    drawLabel(label, 550,40,size = 60, bold = True, fill = color)
     #drawImage(CMUImage(app.mapFilt),0,0)
 
 
 def onStep(app):
+    app.totalSteps += 1
+    app.time.setTime(app.totalSteps)
     updateCanvas(app)
     print(app.cx,app.cy, app.rot)
 
+
+#main floorcasting algorithm
+#learned from: https://www.youtube.com/watch?v=2Yj5mmKWukw, adjusted to fit my code
 def updateCanvas(app):
     for i in range(int(app.horizontalRes)):
         rotate = app.rot + np.deg2rad(i/app.scalingFact - 30)
@@ -84,15 +131,13 @@ def updateCanvas(app):
                 app.mapFilt.putpixel((i, app.halfVertRes*5 - j - 1), app.mapArr.getpixel((X, Y)))
             else:
                 app.mapFilt.putpixel((i, app.halfVertRes*5 - j - 1), (0, 255, 255))
-
-                
-    #app.image = CMUImage(app.mapFilt)
-
+    #splicing a smaller image and resizing it
     for i in range(150):
         for j in range(140):
             app.result.putpixel((i,j),(app.mapFilt.getpixel((i,460+j))))      
     app.resultCopy = app.result.resize((800,600))
-    app.marioHitbox = []     
+    app.marioHitbox = [] 
+    #getting mario's hitbox   
     for i in range(130):
         newRow = []
         for j in range(40):
@@ -100,6 +145,7 @@ def updateCanvas(app):
         app.marioHitbox.append(newRow)
     app.image = CMUImage(app.resultCopy)
 
+#controls
 def onKeyHold(app, keys):
     if ('space' in keys):
         app.isDrifting = True
