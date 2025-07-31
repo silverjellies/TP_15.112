@@ -1,3 +1,4 @@
+#Sarah Zhu
 from cmu_graphics import *
 from PIL import Image
 import random
@@ -50,7 +51,12 @@ def onAppStart(app):
     app.stepsPerSecond = 100
     app.time = Time()
     app.totalSteps = 0
-    app.checkpoints = [False,False,False,False,False]
+    app.checkpointStatus = [False,False,False,False,False]
+    app.checkpointRGB = [(131,130,60),(10,14,20),(255,0,128),(0,64,65),(3,2,4)]
+    app.coinColor = (255,255,128)
+    app.skyColor = (0,255,255)
+    app.coinCooldown = 70
+    app.coinCount = 0
     #got the sprites from https://github.com/s4rd0n1k/pygame_mariokart/blob/master/sprites/mario.png
     spriteRight = loadSpritePilImages('mario.png',12, 1)
     spriteLeft = loadSpritePilImages('mario.png',12, -1)
@@ -71,6 +77,9 @@ def onAppStart(app):
     app.result = Image.new(mode="RGB",size=(150,140)).convert('RGB')
     app.marioHitbox = []
     app.isDrifting = False
+    app.win = False
+    backtrack = Sound('https://soundcloud.com/safrmusic/super-mario-kart-rainbow-road-re-imagined')
+    backtrack.play(loop=True)
     onStep(app)
 
 def loadSpritePilImages(path, numSprites, flip):
@@ -92,31 +101,48 @@ def loadSpritePilImages(path, numSprites, flip):
     return spritePilImages
 
 def redrawAll(app):
-    
-    drawImage(app.image, app.width//2, app.height//2,align='center')
-    if app.turningLeft == 0 and app.turningRight == 0:
-        drawImage(app.spriteRightTurn[0],400, 450, align='center')
-    elif app.turningLeft>0:
-        drawImage(app.spriteLeftTurn[app.leftFrame],400, 450, align='center')
+    if app.win:
+        drawRect(0,0,800,600,fill='black',opacity=20)
+        drawLabel('Completed 3 laps!',400,200,fill='green',size=30,bold=True)
+        drawLabel(f"Total Time: {app.time.getMinutes()}' {app.time.getSeconds()}" + f'"', 400, 550, size=60, bold=True, fill='white', font='orbitron')
     else:
-        drawImage(app.spriteRightTurn[app.rightFrame],400, 450, align='center')
-    drawLine(340,0,340,600)
-    drawLine(0,470,800,470)
-    drawLine(0,510,800,510)
-    drawLabel(f"{app.time.getMinutes()}' {app.time.getSeconds()}" + f'"', 680,50,size = 40, fill = 'white', font = 'orbitron')
-    label,color = app.laps[app.lap]
-    drawRect(530,10,50,65, fill='gray')
-    drawLabel(label, 550,40,size = 60, bold = True, fill = color)
+        drawImage(app.image, app.width//2, app.height//2,align='center')
+        if app.turningLeft == 0 and app.turningRight == 0:
+            drawImage(app.spriteRightTurn[0],400, 450, align='center')
+        elif app.turningLeft>0:
+            drawImage(app.spriteLeftTurn[app.leftFrame],400, 450, align='center')
+        else:
+            drawImage(app.spriteRightTurn[app.rightFrame],400, 450, align='center')
+        drawLine(340,0,340,600)
+        drawLine(0,470,800,470)
+        drawLine(0,510,800,510)
+        drawCircle(400,490,4,fill='red')
+        drawLabel(f"{app.time.getMinutes()}' {app.time.getSeconds()}" + f'"', 680,50,size = 40, fill = 'white', font = 'orbitron')
+        label,color = app.laps[app.lap]
+        drawRect(530,10,50,65, fill='gray')
+        drawLabel(label, 550,40,size = 60, bold = True, fill = color)
+        drawLabel('lap',580,80,fill = 'white', align = 'left-bottom')
+        drawLabel(f'x{app.coinCount} coins',40,20,fill='white')
+        passed = 0
+        for checkpoint in app.checkpointStatus:
+            if checkpoint:
+                passed += 1
+        drawLabel(f'{passed}/5 checkpoints passed',350,30,size = 24, fill='white',bold = True)
     #drawImage(CMUImage(app.mapFilt),0,0)
 
 
 def onStep(app):
-    app.totalSteps += 1
-    app.time.setTime(app.totalSteps)
-    updateCanvas(app)
-    print(app.cx,app.cy, app.rot)
-
-
+    if app.win:
+        pass
+    else:
+        app.totalSteps += 1
+        app.time.setTime(app.totalSteps)
+        updateCanvas(app)
+        app.coinCooldown += 1
+        print(app.coinCount)
+        print(app.resultCopy.getpixel((470,470)))
+        print(app.checkpointStatus)
+    
 #main floorcasting algorithm
 #learned from: https://www.youtube.com/watch?v=2Yj5mmKWukw, adjusted to fit my code
 def updateCanvas(app):
@@ -143,7 +169,39 @@ def updateCanvas(app):
         for j in range(40):
             newRow.append((app.resultCopy.getpixel((340+i,470+j))))    
         app.marioHitbox.append(newRow)
+    passedCheckPoint(app)
+    if app.coinCount<10 and checkCollision(app,app.coinColor) and app.coinCooldown>70:
+        app.coinCount += 1
+        app.coinCooldown = 0
     app.image = CMUImage(app.resultCopy)
+
+def passedCheckPoint(app):
+    for i in range(len(app.checkpointRGB)):
+        color = app.checkpointRGB[i]
+        if checkCollision(app,color) and (i==0 or app.checkpointStatus[i-1] == True):
+            app.checkpointStatus[i] = True
+            break
+    allCheckPassed = True
+    for checkpoint in app.checkpointStatus:
+        if not checkpoint:
+            allCheckPassed = False
+    if allCheckPassed:
+        app.lap+= 1
+        app.checkpointStatus = [False,False,False,False,False]
+        if app.lap>0:
+            app.win = True
+            app.lap = 0
+
+def checkCollision(app, color):
+    for row in app.marioHitbox:
+        if color in row:
+            return True
+    return False 
+
+def isClose(app,color1,color2):
+    a,b,c = color1
+    x,y,z = color2
+    return abs(a-x)<5 and abs(b-y)<5 and abs(c-z)<5
 
 #controls
 def onKeyHold(app, keys):
@@ -161,9 +219,8 @@ def onKeyHold(app, keys):
             app.leftFrame += 1
         app.turningLeft += 1
         #updateCanvas(app)
-        for row in app.marioHitbox:
-            if (0,255,255) in row:
-                app.rot = ogRot
+        if checkCollision(app,app.skyColor):
+            app.rot = ogRot
     elif 'right' in keys and not(app.leftHoldFirst):
         app.rightHoldFirst = True
         ogRot = app.rot
@@ -175,30 +232,28 @@ def onKeyHold(app, keys):
             app.rightFrame += 1
         app.turningRight += 1
         #updateCanvas(app)
-        #for row in app.marioHitbox:
-        #    if (0,255,255) in row:
-        #        app.rot = ogRot
+        if checkCollision(app,app.skyColor):
+                app.rot = ogRot
     if 'up' in keys:
         ogx = app.cx
         ogy = app.cy
-        app.cx += math.cos(app.rot)*0.1
-        app.cy += math.sin(app.rot)*0.1
+        app.cx += math.cos(app.rot)*(0.1+0.025*app.coinCount)
+        app.cy += math.sin(app.rot)*(0.1+0.025*app.coinCount)
         #updateCanvas(app)
-        #for row in app.marioHitbox:
-        #    if (0,255,255) in row:
-        #        app.cx = ogx
-        #        app.cy = ogy
+        if checkCollision(app,app.skyColor):
+                app.cx = ogx
+                app.cy = ogy
     if 'down' in keys:
         ogx = app.cx
         ogy = app.cy
         app.cx -= math.cos(app.rot)*0.1
         app.cy -= math.sin(app.rot)*0.1
         #updateCanvas(app)
-        for row in app.marioHitbox:
-            if (0,255,255) in row:
-                app.cx = ogx
-                app.cy = ogy
-
+        #if checkCollision(app,app.skyColor):
+        #        app.cx = ogx
+        #        app.cy = ogy
+    #print('-------------------')
+    #print(app.marioHitbox)
 def onKeyRelease(app,key):
     if ('left' == key):
         app.leftFrame = 0
