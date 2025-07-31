@@ -12,9 +12,9 @@ def onAppStart(app):
     app.halfVertRes = 120
     app.image = []
     app.scalingFact = app.horizontalRes/60
-    app.cx = 70
-    app.cy = 280
-    app.rot = 120
+    app.cx = 2.3
+    app.cy = 12.2
+    app.rot = 4.7
     app.stepsPerSecond = 100
     spriteRight = loadSpritePilImages('mario.png',12, 1)
     spriteLeft = loadSpritePilImages('mario.png',12, -1)
@@ -65,10 +65,12 @@ def redrawAll(app):
     drawLine(340,0,340,600)
     drawLine(0,470,800,470)
     drawLine(0,510,800,510)
+    #drawImage(CMUImage(app.mapFilt),0,0)
 
 
 def onStep(app):
     updateCanvas(app)
+    print(app.cx,app.cy, app.rot)
 
 def updateCanvas(app):
     for i in range(int(app.horizontalRes)):
@@ -77,8 +79,13 @@ def updateCanvas(app):
         for j in range(app.halfVertRes):
             n = (app.halfVertRes/(app.halfVertRes-j))/cos2
             x,y = app.cx + cos*n, app.cy + sine*n
-            X,Y = int(x/27%1*800), int (y/27%1*600)
-            app.mapFilt.putpixel((i,app.halfVertRes*5-j-1),(app.mapArr.getpixel((X,Y))))
+            X,Y = int(x*25), int (y*25)
+            if 0 <= X < app.width and 0 <= Y < app.height:
+                app.mapFilt.putpixel((i, app.halfVertRes*5 - j - 1), app.mapArr.getpixel((X, Y)))
+            else:
+                app.mapFilt.putpixel((i, app.halfVertRes*5 - j - 1), (0, 255, 255))
+
+                
     #app.image = CMUImage(app.mapFilt)
 
     for i in range(150):
@@ -122,19 +129,19 @@ def onKeyHold(app, keys):
             app.rightFrame += 1
         app.turningRight += 1
         #updateCanvas(app)
-        for row in app.marioHitbox:
-            if (0,255,255) in row:
-                app.rot = ogRot
+        #for row in app.marioHitbox:
+        #    if (0,255,255) in row:
+        #        app.rot = ogRot
     if 'up' in keys:
         ogx = app.cx
         ogy = app.cy
         app.cx += math.cos(app.rot)*0.1
         app.cy += math.sin(app.rot)*0.1
         #updateCanvas(app)
-        for row in app.marioHitbox:
-            if (0,255,255) in row:
-                app.cx = ogx
-                app.cy = ogy
+        #for row in app.marioHitbox:
+        #    if (0,255,255) in row:
+        #        app.cx = ogx
+        #        app.cy = ogy
     if 'down' in keys:
         ogx = app.cx
         ogy = app.cy

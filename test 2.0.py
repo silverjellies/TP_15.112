@@ -11,10 +11,12 @@ def onAppStart(app):
     onStep(app)
 
 def redrawAll(app):
-    for i in range(app.height):
-        for j in range(app.width):
+    for i in range(50):
+        for j in range(50):
             xp,yp= convert(app, app.coords[i][j],app.obs)
-            drawCircle(xp,yp,10,fill='green')
+            drawCircle(xp,yp,1,fill='green')
+
+
 def convert(app, coordinates, obs):
     xr = coordinates[0]-obs[0]
     yr = coordinates[1]-obs[1]
@@ -35,11 +37,25 @@ def convert(app, coordinates, obs):
 def onStep(app):
     app.tot = math.tan(app.theta)
     app.coords = []
-    for i in range(app.height):
+    for i in range(50):
         add = []
-        for j in range(app.width):
+        for j in range(50):
             add.append([i,0,j])
         app.coords.append(add)
+
+def onKeyHold(app, keys):
+    if 'left' in keys:
+        app.obs[0] -= 0.2
+    if 'right' in keys:
+        app.obs[0] += 0.2
+    if 'up' in keys:
+        app.obs[1] -= 0.2
+    if 'down' in keys:
+        app.obs[1] += 0.2
+    if 'w' in keys:
+        app.obs[2] += 0.2
+    if 's' in keys:
+        app.obs[2] -= 0.2
 
 def main():
     runApp(app)
