@@ -78,8 +78,7 @@ def onAppStart(app):
     app.marioHitbox = []
     app.isDrifting = False
     app.win = False
-    backtrack = Sound('https://soundcloud.com/safrmusic/super-mario-kart-rainbow-road-re-imagined')
-    backtrack.play(loop=True)
+
     onStep(app)
 
 def loadSpritePilImages(path, numSprites, flip):
@@ -113,10 +112,6 @@ def redrawAll(app):
             drawImage(app.spriteLeftTurn[app.leftFrame],400, 450, align='center')
         else:
             drawImage(app.spriteRightTurn[app.rightFrame],400, 450, align='center')
-        drawLine(340,0,340,600)
-        drawLine(0,470,800,470)
-        drawLine(0,510,800,510)
-        drawCircle(400,490,4,fill='red')
         drawLabel(f"{app.time.getMinutes()}' {app.time.getSeconds()}" + f'"', 680,50,size = 40, fill = 'white', font = 'orbitron')
         label,color = app.laps[app.lap]
         drawRect(530,10,50,65, fill='gray')
@@ -139,9 +134,6 @@ def onStep(app):
         app.time.setTime(app.totalSteps)
         updateCanvas(app)
         app.coinCooldown += 1
-        print(app.coinCount)
-        print(app.resultCopy.getpixel((470,470)))
-        print(app.checkpointStatus)
     
 #main floorcasting algorithm
 #learned from: https://www.youtube.com/watch?v=2Yj5mmKWukw, adjusted to fit my code
