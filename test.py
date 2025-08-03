@@ -41,33 +41,18 @@ def onAppStart(app):
     app.width = 800
     app.horizontalRes = 150
     app.halfVertRes = 120
-    app.image = []
-    app.laps = [(1,'red'),(2,'blue'),(3,'green')]
-    app.lap = 0
     app.scalingFact = app.horizontalRes/60
-    app.cx = 2.3
-    app.cy = 12.2
-    app.rot = 4.7
     app.stepsPerSecond = 100
-    app.time = Time()
-    app.totalSteps = 0
-    app.checkpointStatus = [False,False,False,False,False]
-    app.checkpointRGB = [(131,130,60),(10,14,20),(255,0,128),(0,64,65),(3,2,4)]
+    app.laps = [(1,'red'),(2,'blue'),(3,'green')]
+    app.checkpointRGB = [(128,128,64),(16,14,20),(255,0,129),(0,64,65),(3,2,4)]
     app.coinColor = (255,255,128)
     app.skyColor = (0,255,255)
-    app.coinCooldown = 70
-    app.coinCount = 0
     #got the sprites from https://github.com/s4rd0n1k/pygame_mariokart/blob/master/sprites/mario.png
-    spriteRight = loadSpritePilImages('mario.png',12, 1)
-    spriteLeft = loadSpritePilImages('mario.png',12, -1)
+    spriteRight = loadSpritePilImages('mario.png',12, 1, 0, 32, 30, 0, 30)
+    spriteLeft = loadSpritePilImages('mario.png',12, -1, 0, 32, 30, 0, 30)
     app.spriteLeftTurn = [CMUImage(pilImage) for pilImage in spriteLeft]
     app.spriteRightTurn = [CMUImage(pilImage) for pilImage in spriteRight]
-    app.turningLeft = 0
-    app.turningRight = 0
-    app.rightFrame = 0
-    app.leftFrame = 0
-    app.leftHoldFirst = False
-    app.rightHoldFirst = False
+    app.coinCooldown = 70
     #got rainbow road from https://mariokart.fandom.com/wiki/Tracks?file=SNES_Rainbow_Road.png
     #I edited it to look like the map you see now
     app.map = Image.open("edited_rainbow_road.png")
@@ -75,21 +60,48 @@ def onAppStart(app):
     app.mapArr = app.map.convert("RGB")
     app.mapFilt = Image.new(mode="RGB",size=(app.width, app.height)).convert('RGB')
     app.result = Image.new(mode="RGB",size=(150,140)).convert('RGB')
+    app.homepage = Image.open('mariokart_home.png')
+    #soundtracks from https://downloads.khinsider.com/game-soundtracks/album/mario-kart-8-deluxe-the-definitive-soundtrack-switch-gamerip-2014
+    app.backtrack = Sound('7-10. Wii Rainbow Road.mp3')
+    app.startSound = Sound('mariostart.mp3')
+    app.menuSound = Sound('1-01. Title Screen.mp3')
+    app.coinSound = Sound('coin-recieved-230517.mp3')
+    app.bestHighscore = 0
+    app.highScore = ''
+    app.betterScore = True
+    initializeVariables(app)
+    app.win = True
+    app.homescreen = False
+
+def initializeVariables(app):
+    app.image = []
+    app.lap = 0
+    app.cx = 2.3
+    app.cy = 12.2
+    app.rot = 4.7
+    app.time = Time()
+    app.stepsDuringGame = 0
+    app.totalSteps = 0
+    app.checkpointStatus = [False,False,False,False,False]
+    app.coinCount = 0
     app.marioHitbox = []
+    app.turningLeft = 0
+    app.turningRight = 0
+    app.rightFrame = 0
+    app.leftFrame = 0
+    app.leftHoldFirst = False
+    app.rightHoldFirst = False
     app.isDrifting = False
     app.win = False
-
+    app.homescreen = True
+    app.duringStartingSound = False
+    app.menuSound.play(loop=True)
     onStep(app)
 
-def loadSpritePilImages(path, numSprites, flip):
+def loadSpritePilImages(path, numSprites, flip, leftMargin, spacing, imageWidth, topMargin, imageHeight):
     spritestrip = Image.open(path)
     spritePilImages = [ ]
     for i in range(numSprites):
-        leftMargin = 0
-        spacing = 32
-        imageWidth = 30
-        topMargin = 0
-        imageHeight = 30
         spriteImage = spritestrip.crop((leftMargin+spacing*i, topMargin, 
                                         leftMargin+imageWidth+spacing*i, topMargin+imageHeight))
         spriteImage = spriteImage.resize((130,130))
@@ -100,10 +112,29 @@ def loadSpritePilImages(path, numSprites, flip):
     return spritePilImages
 
 def redrawAll(app):
-    if app.win:
+    if app.homescreen:
+        image = CMUImage(app.homepage.resize((app.width,app.height)))
+        drawImage(image,0,0)
+        if (app.totalSteps//30)%2 == 0:
+            drawLabel('Press anywhere to begin!', 400, 390, bold=True, size=25)
+    elif app.win:
         drawRect(0,0,800,600,fill='black',opacity=20)
         drawLabel('Completed 3 laps!',400,200,fill='green',size=30,bold=True)
+        drawLabel(f'Highscore for this session: {app.highScore}', 400, 320, bold=True, size=20)
+        drawLabel('Click anywhere to go back to the home screen', 400, 410, bold = True)
+        if app.betterScore:
+            drawLabel('HIGHSCORE !', 255, 305, bold=True, fill='red', rotateAngle=-45)
         drawLabel(f"Total Time: {app.time.getMinutes()}' {app.time.getSeconds()}" + f'"', 400, 550, size=60, bold=True, fill='white', font='orbitron')
+    elif app.duringStartingSound:
+        drawImage(app.image, app.width//2, app.height//2,align='center')
+        drawImage(app.spriteRightTurn[0],400, 450, align='center')
+        drawLabel("00' 00" + '"', 680,50,size = 40, fill = 'white', font = 'orbitron')
+        label,color = app.laps[app.lap]
+        drawRect(530, 10, 50, 65, fill='gray')
+        drawLabel(label, 550, 40, size = 60, bold = True, fill = color)
+        drawLabel('lap', 580, 80, fill = 'white', align = 'left-bottom')
+        drawLabel(f'x{app.coinCount} coins', 40, 20, fill='white')
+        drawLabel('0/5 checkpoints passed',350,30,size = 24, fill='white',bold = True)
     else:
         drawImage(app.image, app.width//2, app.height//2,align='center')
         if app.turningLeft == 0 and app.turningRight == 0:
@@ -114,27 +145,32 @@ def redrawAll(app):
             drawImage(app.spriteRightTurn[app.rightFrame],400, 450, align='center')
         drawLabel(f"{app.time.getMinutes()}' {app.time.getSeconds()}" + f'"', 680,50,size = 40, fill = 'white', font = 'orbitron')
         label,color = app.laps[app.lap]
-        drawRect(530,10,50,65, fill='gray')
-        drawLabel(label, 550,40,size = 60, bold = True, fill = color)
-        drawLabel('lap',580,80,fill = 'white', align = 'left-bottom')
-        drawLabel(f'x{app.coinCount} coins',40,20,fill='white')
+        drawRect(530, 10, 50, 65, fill='gray')
+        drawLabel(label, 550, 40, size = 60, bold = True, fill = color)
+        drawLabel('lap', 580, 80, fill = 'white', align = 'left-bottom')
+        drawLabel(f'x{app.coinCount} coins', 40, 20, fill='white')
         passed = 0
         for checkpoint in app.checkpointStatus:
             if checkpoint:
                 passed += 1
         drawLabel(f'{passed}/5 checkpoints passed',350,30,size = 24, fill='white',bold = True)
-    #drawImage(CMUImage(app.mapFilt),0,0)
 
 
 def onStep(app):
-    if app.win:
+    app.totalSteps += 1
+    if app.win or app.homescreen:
         pass
     else:
-        app.totalSteps += 1
-        app.time.setTime(app.totalSteps)
+        app.stepsDuringGame += 1
+        app.time.setTime(app.stepsDuringGame)
         updateCanvas(app)
         app.coinCooldown += 1
-    
+    if int(app.time.getSeconds()) > 4 and app.duringStartingSound:
+            app.duringStartingSound = False
+            app.time.setTime(0)
+            app.backtrack.play(loop=True)
+            app.stepsDuringGame = 0
+
 #main floorcasting algorithm
 #learned from: https://www.youtube.com/watch?v=2Yj5mmKWukw, adjusted to fit my code
 def updateCanvas(app):
@@ -158,12 +194,13 @@ def updateCanvas(app):
     #getting mario's hitbox   
     for i in range(130):
         newRow = []
-        for j in range(40):
+        for j in range(55):
             newRow.append((app.resultCopy.getpixel((340+i,470+j))))    
         app.marioHitbox.append(newRow)
     passedCheckPoint(app)
     if app.coinCount<10 and checkCollision(app,app.coinColor) and app.coinCooldown>70:
         app.coinCount += 1
+        app.coinSound.play(loop=False)
         app.coinCooldown = 0
     app.image = CMUImage(app.resultCopy)
 
@@ -180,9 +217,16 @@ def passedCheckPoint(app):
     if allCheckPassed:
         app.lap+= 1
         app.checkpointStatus = [False,False,False,False,False]
-        if app.lap>2:
+        if app.lap>0:
             app.win = True
+            app.backtrack.pause()
             app.lap = 0
+            if app.bestHighscore == 0 or (app.time.getMinutes*60 + app.time.getSeconds) > app.bestHighscore:
+                app.betterScore = True
+                app.bestHighscore = app.time.getMinutes*60 + app.time.getSeconds
+            else:
+                app.betterScore = False 
+            app.highScore = f"{app.time.getMinutes}'{app.time.getSeconds}" + '"'
 
 def checkCollision(app, color):
     for row in app.marioHitbox:
@@ -190,68 +234,74 @@ def checkCollision(app, color):
             return True
     return False 
 
-def isClose(app,color1,color2):
-    a,b,c = color1
-    x,y,z = color2
-    return abs(a-x)<5 and abs(b-y)<5 and abs(c-z)<5
+def onMousePress(app, mouseX, mouseY):
+    if app.homescreen:
+        app.homescreen = False
+        app.menuSound.pause()
+        onStep(app)
+        app.startSound.play(loop=False)
+        app.duringStartingSound = True
+    if app.win:
+        initializeVariables(app)
 
 #controls
 def onKeyHold(app, keys):
-    if ('space' in keys):
-        app.isDrifting = True
-    if ('left' in keys) and not(app.rightHoldFirst):
-        if 'right' not in keys:
-            app.leftHoldFirst = True
-        ogRot = app.rot
-        app.rot -= 0.05
-        if app.isDrifting:
-            app.rot-=0.03
-            app.leftFrame = 3
-        elif app.turningLeft<2:
-            app.leftFrame += 1
-        app.turningLeft += 1
-        #updateCanvas(app)
-        if checkCollision(app,app.skyColor):
-            app.rot = ogRot
-    elif 'right' in keys and not(app.leftHoldFirst):
-        app.rightHoldFirst = True
-        ogRot = app.rot
-        app.rot += 0.05
-        if app.isDrifting:
-            app.rot += 0.03
-            app.rightFrame = 3
-        elif app.turningRight<2:
-            app.rightFrame += 1
-        app.turningRight += 1
-        #updateCanvas(app)
-        if checkCollision(app,app.skyColor):
+    if (app.duringStartingSound or app.homescreen):
+        pass
+    else:
+        if ('space' in keys):
+            app.isDrifting = True
+        if ('left' in keys or 'a' in keys) and not(app.rightHoldFirst):
+            if 'right' not in keys:
+                app.leftHoldFirst = True
+            ogRot = app.rot
+            app.rot -= 0.05
+            if app.isDrifting:
+                app.rot-=0.03
+                app.leftFrame = 3
+            elif app.turningLeft<2:
+                app.leftFrame += 1
+            app.turningLeft += 1
+            #updateCanvas(app)
+            if checkCollision(app,app.skyColor):
                 app.rot = ogRot
-    if 'up' in keys:
-        ogx = app.cx
-        ogy = app.cy
-        app.cx += math.cos(app.rot)*(0.1+0.025*app.coinCount)
-        app.cy += math.sin(app.rot)*(0.1+0.025*app.coinCount)
-        #updateCanvas(app)
-        if checkCollision(app,app.skyColor):
-                app.cx = ogx
-                app.cy = ogy
-    if 'down' in keys:
-        ogx = app.cx
-        ogy = app.cy
-        app.cx -= math.cos(app.rot)*0.1
-        app.cy -= math.sin(app.rot)*0.1
-        #updateCanvas(app)
-        #if checkCollision(app,app.skyColor):
-        #        app.cx = ogx
-        #        app.cy = ogy
-    #print('-------------------')
-    #print(app.marioHitbox)
+        elif ('right' in keys or 'd' in keys) and not(app.leftHoldFirst):
+            app.rightHoldFirst = True
+            ogRot = app.rot
+            app.rot += 0.05
+            if app.isDrifting:
+                app.rot += 0.03
+                app.rightFrame = 3
+            elif app.turningRight<2:
+                app.rightFrame += 1
+            app.turningRight += 1
+            #updateCanvas(app)
+            if checkCollision(app,app.skyColor):
+                    app.rot = ogRot
+        if 'up' in keys or 'w' in keys:
+            ogx = app.cx
+            ogy = app.cy
+            app.cx += math.cos(app.rot)*(0.1+0.025*app.coinCount)
+            app.cy += math.sin(app.rot)*(0.1+0.025*app.coinCount)
+            #updateCanvas(app)
+            if checkCollision(app,app.skyColor):
+                    app.cx = ogx
+                    app.cy = ogy
+        if 'down' in keys or 's' in keys:
+            ogx = app.cx
+            ogy = app.cy
+            app.cx -= math.cos(app.rot)*0.1
+            app.cy -= math.sin(app.rot)*0.1
+            #updateCanvas(app)
+            #if checkCollision(app,app.skyColor):
+            #        app.cx = ogx
+            #        app.cy = ogy
 def onKeyRelease(app,key):
-    if ('left' == key):
+    if ('left' == key or 'a' == key):
         app.leftFrame = 0
         app.turningLeft = 0
         app.leftHoldFirst = False
-    elif 'right' == key:
+    elif 'right' == key or 'd' == key:
         app.rightHoldFirst = False
         app.turningRight = 0
         app.rightFrame = 0
